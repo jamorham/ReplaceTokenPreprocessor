@@ -33,6 +33,7 @@ import org.gradle.api.UnknownTaskException;
 import org.gradle.api.tasks.TaskProvider;
 
 import java.util.Collections;
+import java.util.List;
 
 import static com.github.jamorham.android.replace.token.PreprocessorTask.ANDROID_MANIFEST;
 
@@ -41,21 +42,27 @@ public class PreprocessorPlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
-
         // Register replace preprocessor extension
-        PreprocessorExtension extension = project.getExtensions().create(
+        final PreprocessorExtension extension = project.getExtensions().create(
                 PreprocessorExtension.EXTENSION_NAME
                 , PreprocessorExtension.class
                 , project);
 
         // Register replace token preprocessor task
-        TaskProvider<PreprocessorTask> replaceTokenPreprocessorTask = project.getTasks().register(
+        final TaskProvider<PreprocessorTask> replaceTokenPreprocessorTask = project.getTasks().register(
                 PreprocessorTask.TASK_ID
                 , PreprocessorTask.class);
 
+        final List<String> tasks = project.getGradle().getStartParameter().getTaskNames();
 
-        if (!project.getGradle().getStartParameter().getTaskNames().isEmpty()) {
-            //System.out.println("Gradle Build invocation");
+        if (!tasks.isEmpty()
+                && (!(tasks.size() == 1 && tasks.get(0).equals("clean")))) {
+            project.getTasks().forEach((task) -> {
+                if (task.getName().startsWith("pre")) {
+                    task.dependsOn(replaceTokenPreprocessorTask);
+                }
+            });
+
             try {
 
                 final AppExtension appExtension = (AppExtension) project.getExtensions().getByName("android");

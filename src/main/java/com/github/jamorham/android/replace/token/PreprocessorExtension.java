@@ -138,13 +138,13 @@ public class PreprocessorExtension {
     public void setSource(Set<String> sources) {
         // Check that all sources are valid
         for (String dir : sources) {
-            Path path = new File(dir).toPath();
+            Path path = new File(dir).toPath().toAbsolutePath();
             if (Files.isDirectory(path) && Files.exists(path)) {
                 this.sources.add(path.toAbsolutePath().toString());
                 continue;
             }
             try {
-                path = new File(this.project.getProjectDir(), dir).toPath();
+                path = new File(this.project.getProjectDir(), dir).toPath().toAbsolutePath();
                 if (Files.isDirectory(path) && Files.exists(path)) {
                     this.sources.add(path.toAbsolutePath().toString());
                     continue;
@@ -152,7 +152,7 @@ public class PreprocessorExtension {
             } catch (Exception ignored) {
             }
             try {
-                path = new File(this.project.getRootDir(), dir).toPath();
+                path = new File(this.project.getRootDir(), dir).toPath().toAbsolutePath();
                 if (Files.isDirectory(path) && Files.exists(path)) {
                     this.sources.add(path.toAbsolutePath().toString());
                     continue;
@@ -191,13 +191,13 @@ public class PreprocessorExtension {
     public void setResource(Set<String> resources) {
         // Check that all resources are valid
         for (String dir : resources) {
-            Path path = new File(dir).toPath();
+            Path path = new File(dir).toPath().toAbsolutePath();
             if (Files.isDirectory(path) && Files.exists(path)) {
                 this.resources.add(path.toAbsolutePath().toString());
                 continue;
             }
             try {
-                path = new File(this.project.getProjectDir(), dir).toPath();
+                path = new File(this.project.getProjectDir(), dir).toPath().toAbsolutePath();
                 if (Files.isDirectory(path) && Files.exists(path)) {
                     this.resources.add(path.toAbsolutePath().toString());
                     continue;
@@ -205,7 +205,7 @@ public class PreprocessorExtension {
             } catch (Exception ignored) {
             }
             try {
-                path = new File(this.project.getRootDir(), dir).toPath();
+                path = new File(this.project.getRootDir(), dir).toPath().toAbsolutePath();
                 if (Files.isDirectory(path) && Files.exists(path)) {
                     this.resources.add(path.toAbsolutePath().toString());
                 }
