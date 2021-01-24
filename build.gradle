@@ -1,0 +1,53 @@
+
+plugins {
+    id 'java'
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+
+group = 'com.github.jamorham'
+version = '1.0'
+
+// Minimum java version
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+// define minimum java version and encoding
+tasks.withType(JavaCompile) {
+    // Minimum java version
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    // Make sure to use UTF-8
+    options.encoding = 'UTF-8'
+}
+
+// Repositories for dependencies resolution
+repositories {
+    google()
+    jcenter()
+    mavenCentral()
+}
+
+// Dependencies of this plugin
+dependencies {
+    implementation gradleApi()
+    implementation group: 'commons-io', name: 'commons-io', version: '2.6'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
+
+    implementation('com.android.tools.build:gradle:3.5.4') {
+        transitive = true
+    }
+
+    testImplementation  group: 'junit', name: 'junit', version: '4.12'
+}
+
+
+gradlePlugin {
+    plugins {
+        gradleReplaceTokenPreprocessorPlugin {
+            id = 'com.github.jamorham.android.replace.token.preprocessor'
+            displayName = 'A simple Android replace token preprocessor plugin'
+            implementationClass = 'com.github.jamorham.android.replace.token.PreprocessorPlugin'
+        }
+    }
+}
