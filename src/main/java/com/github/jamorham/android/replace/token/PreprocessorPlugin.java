@@ -76,7 +76,11 @@ public class PreprocessorPlugin implements Plugin<Project> {
                 final AppExtension appExtension = (AppExtension) project.getExtensions().getByName("android");
                 final String targetPath = new PreprocessorExtension(project).getTarget().getAbsolutePath();
                 appExtension.getSourceSets().all(sourceSet -> {
-                            sourceSet.getJava().setSrcDirs(Collections.singleton(targetPath + "/java"));
+                            if (sourceSet.getName().startsWith("test")) {
+                                sourceSet.getJava().setSrcDirs(Collections.singleton(targetPath + "/test/java"));
+                            } else {
+                                sourceSet.getJava().setSrcDirs(Collections.singleton(targetPath + "/main/java"));
+                            }
                             sourceSet.getManifest().srcFile(targetPath + "/" + ANDROID_MANIFEST);
                         }
                 );

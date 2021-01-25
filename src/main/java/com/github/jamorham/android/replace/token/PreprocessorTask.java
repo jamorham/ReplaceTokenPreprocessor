@@ -40,6 +40,8 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
@@ -76,14 +78,13 @@ public class PreprocessorTask extends DefaultTask {
         final Set<String> resources = this.extension.getResources();
 
         final File target = this.extension.getTarget();
-        final File srcTarget = new File(target, "java");
-        final File resTarget = new File(target, "res");
+        final File resTarget = new File(target, "main/res");
         final File manifestTarget = new File(target, ANDROID_MANIFEST);
 
         log("  Checking sources folders...");
 
         if (sources.isEmpty()) {
-            extension.setSource("src/main/java");
+            extension.setSource(Stream.of("src/main/java", "src/test/java").collect(Collectors.toList()));
         }
 
         if (resources.isEmpty()) {
@@ -98,19 +99,21 @@ public class PreprocessorTask extends DefaultTask {
             }
         }
 
-        log("  Creating target folder...");
-
-        // Create target directory
-        FileUtils.forceMkdirParent(srcTarget);
-        FileUtils.forceMkdirParent(resTarget);
-
         log("  Processing files...");
 
         // Loop through all source files
-        for (String source : sources) {
+        for (final String source : sources) {
             executor.submit(() -> {
-                processFolder(source, srcTarget, project, preprocessor);
-                processManifest(source, manifestTarget, preprocessor);
+                final String pair = getFolderPair(source);
+                if (pair != null) {
+                    final File srcTarget = new File(target, pair);
+                    processFolder(source, srcTarget, project, preprocessor);
+                    processManifest(source, manifestTarget, preprocessor);
+                } else {
+                    final String error_message = "Failure to parse source folder: " + source;
+                    log(error_message);
+                    throw new RuntimeException(error_message);
+                }
             });
         } // per source folder
 
@@ -128,19 +131,29 @@ public class PreprocessorTask extends DefaultTask {
             e.printStackTrace();
         }
 
-        log("All threads complete - Updating main source set..." + srcTarget);
-
         final AppExtension extension = (AppExtension) project.getExtensions().getByName("android");
 
         extension.getSourceSets().all(sourceSet -> {
                     log("Source set: " + sourceSet + " " + sourceSet.getRes().getSrcDirs().toString());
-                    sourceSet.getJava().setSrcDirs(Collections.singleton(srcTarget));       // warning this is probably too late in the sequence
+                    //sourceSet.getJava().setSrcDirs(Collections.singleton(srcTarget));       // warning this is probably too late in the sequence
                     sourceSet.getRes().setSrcDirs(Collections.singleton(resTarget));
                 }
         );
     }
 
+    private String getFolderPair(final String path) {
+        final String[] pathA = path.split("/");
+        final int l = pathA.length;
+        if (l < 4) return null;
+        return pathA[l - 2] + "/" + pathA[l - 1];
+    }
+
     private void processFolder(final String source, final File target, final Project project, final Preprocessor preprocessor) {
+        try {
+            FileUtils.forceMkdirParent(target);
+        } catch (IOException e) {
+            //
+        }
         final HashSet<String> files = new HashSet<>();
         final File srcDir = new File(source);
         for (final File file : project.fileTree(srcDir)) {
