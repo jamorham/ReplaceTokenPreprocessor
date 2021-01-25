@@ -140,9 +140,9 @@ public class PreprocessorExtension {
 
     // TODO keep it DRY
 
-    public void setSource(Set<String> sources) {
+    public void setSource(final Set<String> sources) {
         // Check that all sources are valid
-        for (String dir : sources) {
+        for (final String dir : sources) {
             Path path = new File(dir).toPath().toAbsolutePath();
             if (Files.isDirectory(path) && Files.exists(path)) {
                 this.sources.add(path.toAbsolutePath().toString());

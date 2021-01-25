@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.github.jamorham'
-version = '1.4'
+version = '1.5'
 
 // Minimum java version
 sourceCompatibility = JavaVersion.VERSION_1_8

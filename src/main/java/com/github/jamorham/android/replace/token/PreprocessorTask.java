@@ -168,10 +168,13 @@ public class PreprocessorTask extends DefaultTask {
     }
 
     private String getFolderPair(final String path) {
-        final String[] pathA = path.split("/");
-        final int l = pathA.length;
-        if (l < 4) return null;
-        return pathA[l - 2] + "/" + pathA[l - 1];
+        String[] pathA = path.split("/");
+        if (pathA.length < 4) {
+            // try windows format
+            pathA = path.split("\\\\");
+        }
+        if (pathA.length < 4) return null;
+        return pathA[pathA.length - 2] + "/" + pathA[pathA.length - 1];
     }
 
     private void processFolder(final String source, final File target, final Project project, final Preprocessor preprocessor) {
