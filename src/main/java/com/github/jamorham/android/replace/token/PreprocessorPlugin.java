@@ -53,6 +53,11 @@ public class PreprocessorPlugin implements Plugin<Project> {
                 PreprocessorTask.TASK_ID
                 , PreprocessorTask.class);
 
+        // Register replace token preprocessor task for clean
+        final TaskProvider<PreprocessorTask> replaceTokenPreprocessorTaskClean = project.getTasks().register(
+                PreprocessorTask.TASK_ID_CLEAN
+                , PreprocessorTask.class);
+
         final List<String> tasks = project.getGradle().getStartParameter().getTaskNames();
 
         if (!tasks.isEmpty()
@@ -60,6 +65,9 @@ public class PreprocessorPlugin implements Plugin<Project> {
             project.getTasks().forEach((task) -> {
                 if (task.getName().startsWith("pre")) {
                     task.dependsOn(replaceTokenPreprocessorTask);
+                }
+                if (task.getName().startsWith("clean")) {
+                    task.finalizedBy(replaceTokenPreprocessorTaskClean);
                 }
             });
 

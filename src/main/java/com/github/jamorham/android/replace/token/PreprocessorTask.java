@@ -48,6 +48,7 @@ public class PreprocessorTask extends DefaultTask {
 
     // The task ID
     public static final String TASK_ID = "replacePreprocessor";
+    public static final String TASK_ID_CLEAN = "replacePreprocessorClean";
 
     // Manifest
     public static final String ANDROID_MANIFEST = "AndroidManifest.xml";
