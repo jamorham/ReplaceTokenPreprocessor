@@ -35,6 +35,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class PreprocessorExtension {
@@ -85,6 +86,7 @@ public class PreprocessorExtension {
      */
     private Map<String, Object> replace = new LinkedHashMap<>();
 
+    private final ReentrantLock lock = new ReentrantLock();
 
     /**
      * @param project Current project
@@ -102,6 +104,9 @@ public class PreprocessorExtension {
         return this.project;
     }
 
+    public ReentrantLock getLock() {
+        return this.lock;
+    }
 
     public void setVerbose(boolean verbose) {
         this.verbose = verbose;

@@ -64,81 +64,107 @@ public class PreprocessorTask extends DefaultTask {
     }
 
     @TaskAction
-    public void process() throws IOException {
+    public synchronized void process() throws IOException {
 
-        final ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
-        // Instantiate the preprocessor
-        final Preprocessor preprocessor = new Preprocessor(this.extension.getExtensions(), this.extension.getReplace(), this.extension.isVerbose());
+        final long startTime = System.currentTimeMillis();
+        boolean setSourcesDefaults = false;
+        boolean setResourcesDefaults = false;
 
-        log("Starting android replace token preprocessor");
+         try {
 
-        // Data
-        final Project project = this.extension.getProject();
-        final Set<String> sources = this.extension.getSources();
-        final Set<String> resources = this.extension.getResources();
+            extension.getLock().lock();
 
-        final File target = this.extension.getTarget();
-        final File resTarget = new File(target, "main/res");
-        final File manifestTarget = new File(target, ANDROID_MANIFEST);
+            final ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+            // Instantiate the preprocessor
+            final Preprocessor preprocessor = new Preprocessor(this.extension.getExtensions(), this.extension.getReplace(), this.extension.isVerbose());
 
-        log("  Checking sources folders...");
+            log("Starting android replace token preprocessor");
 
-        if (sources.isEmpty()) {
-            extension.setSource(Stream.of("src/main/java", "src/test/java").collect(Collectors.toList()));
-        }
+            // Data
+            final Project project = this.extension.getProject();
+            final Set<String> sources = this.extension.getSources();
+            final Set<String> resources = this.extension.getResources();
 
-        if (resources.isEmpty()) {
-            extension.setResource("src/main/res");
-        }
+            final File target = this.extension.getTarget();
+            final File resTarget = new File(target, "main/res");
+            final File manifestTarget = new File(target, ANDROID_MANIFEST);
 
-        // Check
-        for (String source : sources) {
-            log("Checking source: " + source);
-            if (!Files.isDirectory((new File(source)).toPath())) {
-                log("    " + source + " is not a valid folder!");
+            log("  Checking sources folders...");
+
+            if (sources.isEmpty()) {
+                extension.setSource(Stream.of("src/main/java", "src/test/java").collect(Collectors.toList()));
+                setSourcesDefaults = true;
             }
-        }
 
-        log("  Processing files...");
+            if (resources.isEmpty()) {
+                extension.setResource("src/main/res");
+                setResourcesDefaults = true;
+            }
 
-        // Loop through all source files
-        for (final String source : sources) {
-            executor.submit(() -> {
-                final String pair = getFolderPair(source);
-                if (pair != null) {
-                    final File srcTarget = new File(target, pair);
-                    processFolder(source, srcTarget, project, preprocessor);
-                    processManifest(source, manifestTarget, preprocessor);
-                } else {
-                    final String error_message = "Failure to parse source folder: " + source;
-                    log(error_message);
-                    throw new RuntimeException(error_message);
+            // Check
+            for (String source : sources) {
+                log("Checking source: " + source);
+                if (!Files.isDirectory((new File(source)).toPath())) {
+                    log("    " + source + " is not a valid folder!");
                 }
-            });
-        } // per source folder
+            }
 
-        // Loop through all resource files
-        for (String resource : resources) {
-            executor.submit(() -> {
-                processFolder(resource, resTarget, project, preprocessor);
-            });
-        } // per resource folder
+            log("  Processing files...");
 
-        executor.shutdown();    // prepare to end threading
-        try {
-            executor.awaitTermination(2, TimeUnit.DAYS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+            // Loop through all source files
+            for (final String source : sources) {
+                executor.submit(() -> {
+                    final String pair = getFolderPair(source);
+                    if (pair != null) {
+                        final File srcTarget = new File(target, pair);
+                        processFolder(source, srcTarget, project, preprocessor);
+                        processManifest(source, manifestTarget, preprocessor);
+                    } else {
+                        final String error_message = "Failure to parse source folder: " + source;
+                        log(error_message);
+                        throw new RuntimeException(error_message);
+                    }
+                });
+            } // per source folder
 
-        final AppExtension extension = (AppExtension) project.getExtensions().getByName("android");
+            // Loop through all resource files
+            for (String resource : resources) {
+                executor.submit(() -> {
+                    processFolder(resource, resTarget, project, preprocessor);
+                });
+            } // per resource folder
 
-        extension.getSourceSets().all(sourceSet -> {
-                    log("Source set: " + sourceSet + " " + sourceSet.getRes().getSrcDirs().toString());
-                    //sourceSet.getJava().setSrcDirs(Collections.singleton(srcTarget));       // warning this is probably too late in the sequence
-                    sourceSet.getRes().setSrcDirs(Collections.singleton(resTarget));
+            executor.shutdown();    // prepare to end threading
+            try {
+                while (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    log("Awaiting completion of threads.");
                 }
-        );
+            } catch (InterruptedException e) {
+                log("Got interruption waiting for threads to finish! " + e);
+            }
+
+            final AppExtension extension = (AppExtension) project.getExtensions().getByName("android");
+
+            extension.getSourceSets().all(sourceSet -> {
+                        log("Source set: " + sourceSet + " " + sourceSet.getRes().getSrcDirs().toString());
+                        //sourceSet.getJava().setSrcDirs(Collections.singleton(srcTarget));       // warning this is probably too late in the sequence
+                        sourceSet.getRes().setSrcDirs(Collections.singleton(resTarget));
+                    }
+            );
+
+            if (setSourcesDefaults) {
+                sources.clear();
+            }
+            if (setResourcesDefaults) {
+                resources.clear();
+            }
+
+        } finally {
+            extension.getLock().unlock();
+        }
+        final long duration = System.currentTimeMillis() - startTime;
+        log("Finished processing in " + duration + " ms");
+
     }
 
     private String getFolderPair(final String path) {
@@ -162,6 +188,7 @@ public class PreprocessorTask extends DefaultTask {
             files.add(out.getAbsolutePath());
             preprocessor.process(file, out);
         }
+        log("Processed " + files.size() + " files in " + source);
         removeNotInSet(files, project.fileTree(target));
     }
 
